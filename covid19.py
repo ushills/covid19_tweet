@@ -34,10 +34,7 @@ twitter_access_secret = config["twitter"]["access_secret"]
 
 area = ["areaType=nation", "areaName=England"]
 
-structure = {
-    "date": "date",
-    "newCasesByPublishDate": "newCasesByPublishDate",
-}
+structure = {"date": "date", "newCasesByPublishDate": "newCasesByPublishDate"}
 
 
 def get_covid_data():
@@ -45,11 +42,46 @@ def get_covid_data():
     data = api.get_json()
     return data
 
+
 def get_last_modified():
-    latest_update_header_response = requests.get('https://api.coronavirus.data.gov.uk/v1/data?filters=areaType=nation;areaName=england&structure=%7B%22name%22:%22areaName%22%7D')
-    latest_update_header = latest_update_header_response.headers['Last-Modified']
-    last_modified_datetime = datetime.strptime(latest_update_header, '%a, %d %b %Y %H:%M:%S %Z')
+    latest_update_header_response = requests.get(
+        "https://api.coronavirus.data.gov.uk/v1/data?filters=areaType=nation;areaName=england&structure=%7B%22name%22:%22areaName%22%7D"
+    )
+    latest_update_header = latest_update_header_response.headers["Last-Modified"]
+    last_modified_datetime = datetime.strptime(
+        latest_update_header, "%a, %d %b %Y %H:%M:%S %Z"
+    )
     return last_modified_datetime
+
+
+def get_local_last_modified():
+    try:
+        with open("last_modified") as f:
+            local_last_modified = f.read()
+            # 2020-08-23 14:05:29
+            return datetime.strptime(local_last_modified, '%Y-%m-%d %H:%M:%S')
+    except:
+        return datetime(1970, 1, 1, 0, 0, 0)
+
+
+def write_last_modified_to_file(last_modified):
+    try:
+        with open("last_modified", "w") as f:
+            f.write(str(last_modified))
+    except:
+        raise
+
+
+def check_last_modified():
+    last_modified_from_site = get_last_modified()
+    local_last_modified = get_local_last_modified()
+    if last_modified_from_site > local_last_modified:
+        write_last_modified_to_file(last_modified_from_site)
+        return True
+    else:
+        write_last_modified_to_file(local_last_modified)
+        return False
+
 
 def check_data_is_current(data):
     latest_date_str = data["data"][0]["date"]
@@ -71,8 +103,9 @@ def add_7_day_average(data):
 def create_graph(data, latest_7day_average):
     ax = plt.gca()
     x_values = [datetime.strptime(d, "%Y-%m-%d").date() for d in data["date"]]
-    formatter = mdates.DateFormatter("%Y-%b")
+    formatter = mdates.DateFormatter("%b-%y")
     ax.xaxis.set_major_formatter(formatter)
+    plt.xticks(rotation=45)
     plt.box(on=None)
     plt.plot(x_values, data["7DayAverage"], label="7 Day Average")
     plt.title("COVID-19 7-Day Average England - " + latest_7day_average)
@@ -106,11 +139,10 @@ def create_tweet(latest_7day_average):
 
 if __name__ == "__main__":
     raw_data = get_covid_data()
-    if 0 == 0:
+    if check_last_modified():
         data, latest_7day_average = add_7_day_average(raw_data)
         create_graph(data, latest_7day_average)
-        print(get_last_modified())
-        #create_tweet(latest_7day_average)
+        # create_tweet(latest_7day_average)
         print("Data updated")
     else:
         print("Data has not been updated")
