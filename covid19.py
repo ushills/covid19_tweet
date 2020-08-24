@@ -9,7 +9,6 @@ import pandas as pd
 import tweepy
 from uk_covid19 import Cov19API
 
-
 # set configuation file path
 parser = argparse.ArgumentParser(description="Tweet latest COVID-19 data for England")
 parser.add_argument(
@@ -31,6 +30,8 @@ twitter_oath_key = config["twitter"]["oath_key"]
 twitter_oath_secret = config["twitter"]["oath_secret"]
 twitter_access_key = config["twitter"]["access_key"]
 twitter_access_secret = config["twitter"]["access_secret"]
+graph_file = config['files']['graph_file']
+last_modified_file = config['files']['last_modified_file']
 
 area = ["areaType=nation", "areaName=England"]
 
@@ -56,7 +57,7 @@ def get_last_modified():
 
 def get_local_last_modified():
     try:
-        with open("last_modified") as f:
+        with open(last_modified_file) as f:
             local_last_modified = f.read()
             # 2020-08-23 14:05:29
             return datetime.strptime(local_last_modified, '%Y-%m-%d %H:%M:%S')
@@ -66,7 +67,7 @@ def get_local_last_modified():
 
 def write_last_modified_to_file(last_modified):
     try:
-        with open("last_modified", "w") as f:
+        with open(last_modified_file, "w") as f:
             f.write(str(last_modified))
     except:
         raise
@@ -106,10 +107,11 @@ def create_graph(data, latest_7day_average):
     formatter = mdates.DateFormatter("%b-%y")
     ax.xaxis.set_major_formatter(formatter)
     plt.xticks(rotation=45)
+    plt.tick_params('x', labelsize='small')
     plt.box(on=None)
     plt.plot(x_values, data["7DayAverage"], label="7 Day Average")
     plt.title("COVID-19 7-Day Average England - " + latest_7day_average)
-    plt.savefig("covid19_7day_average.png")
+    plt.savefig(graph_file)
 
 
 def create_tweet(latest_7day_average):
@@ -126,7 +128,7 @@ def create_tweet(latest_7day_average):
         print("Error during authentication")
 
     # send tweet
-    media = api.media_upload("covid19_7day_average.png")
+    media = api.media_upload(graph_file)
     media_id = media.media_id_string
     media_id
     tweet_text = (
@@ -142,7 +144,7 @@ if __name__ == "__main__":
     if check_last_modified():
         data, latest_7day_average = add_7_day_average(raw_data)
         create_graph(data, latest_7day_average)
-        # create_tweet(latest_7day_average)
+        create_tweet(latest_7day_average)
         print("Data updated")
     else:
         print("Data has not been updated")
