@@ -131,3 +131,4 @@ dmypy.json
 # Project specific
 *.png
 *.cfg
+last_modified
