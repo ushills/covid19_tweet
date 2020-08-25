@@ -140,8 +140,8 @@ def create_tweet(latest_7day_average):
 
 
 if __name__ == "__main__":
-    raw_data = get_covid_data()
     if check_last_modified():
+        raw_data = get_covid_data()
         data, latest_7day_average = add_7_day_average(raw_data)
         create_graph(data, latest_7day_average)
         create_tweet(latest_7day_average)
